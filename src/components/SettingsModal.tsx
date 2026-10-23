@@ -46,9 +46,11 @@ import {
   HelpCircle,
   Info,
   Target,
-  Scale
+  Scale,
+  KeyRound
 } from 'lucide-react';
 import { HelpTooltipButton } from './HelpTooltipButton';
+import { getStoredPasscode, setStoredPasscode, clearStoredPasscode } from '../utils/geminiClient';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -132,6 +134,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   // State Tes Rumus
   const [showFormulaTest, setShowFormulaTest] = useState(false);
+
+  // State Kode Akses AI (Vercel)
+  const [passcodeVal, setPasscodeVal] = useState(getStoredPasscode());
+  const [passcodeSuccess, setPasscodeSuccess] = useState<string | null>(null);
+
+  const handleSavePasscode = () => {
+    if (!passcodeVal.trim()) {
+      clearStoredPasscode();
+      setPasscodeVal('');
+      setPasscodeSuccess('Kode akses dihapus.');
+      setTimeout(() => setPasscodeSuccess(null), 3000);
+      return;
+    }
+    setStoredPasscode(passcodeVal);
+    setPasscodeSuccess('Kode akses berhasil disimpan di peramban ini.');
+    setTimeout(() => setPasscodeSuccess(null), 3000);
+  };
+
+  const handleClearPasscode = () => {
+    clearStoredPasscode();
+    setPasscodeVal('');
+    setPasscodeSuccess('Kode akses telah dihapus dari peramban.');
+    setTimeout(() => setPasscodeSuccess(null), 3000);
+  };
 
   if (!isOpen) return null;
 
@@ -1177,6 +1203,60 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* 3. Kode Akses Fitur AI (Vercel Serverless) */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <KeyRound className="w-4 h-4 text-indigo-600" />
+                    <span className="font-bold text-slate-900 block text-xs">
+                      3. Kode Akses Fitur AI (Server Vercel)
+                    </span>
+                  </div>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    getStoredPasscode() ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
+                  }`}>
+                    {getStoredPasscode() ? 'Kode Tersimpan' : 'Belum Diatur'}
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-slate-500 leading-relaxed">
+                  Diperlukan jika aplikasi di-deploy ke Vercel dengan proteksi variabel <code className="bg-slate-200 px-1 py-0.2 rounded font-mono text-[10px]">APP_PASSCODE</code>. Fitur non-AI (riset pasar manual, kalender musiman, data saya, dan ekspor laporan) selalu dapat digunakan tanpa kode akses.
+                </p>
+
+                {passcodeSuccess && (
+                  <div className="p-2 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] rounded-lg font-medium flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>{passcodeSuccess}</span>
+                  </div>
+                )}
+
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <input
+                    type="password"
+                    value={passcodeVal}
+                    onChange={(e) => setPasscodeVal(e.target.value)}
+                    placeholder="Masukkan kode akses AI..."
+                    className="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-900 font-mono focus:outline-emerald-600"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSavePasscode}
+                    className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors shadow-2xs"
+                  >
+                    Simpan Kode
+                  </button>
+                  {getStoredPasscode() && (
+                    <button
+                      type="button"
+                      onClick={handleClearPasscode}
+                      className="px-3 py-1.5 border border-rose-300 bg-white hover:bg-rose-50 text-rose-700 rounded-lg text-xs font-bold cursor-pointer transition-colors"
+                    >
+                      Hapus Kode Akses
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Data Reset Options */}

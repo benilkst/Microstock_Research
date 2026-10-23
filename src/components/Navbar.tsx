@@ -51,7 +51,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <>
       {/* Desktop / Tablet Header */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
+      <header 
+        className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200"
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Brand Logo & Title */}
@@ -236,7 +239,10 @@ export const Navbar: React.FC<NavbarProps> = ({
       </header>
 
       {/* Mobile Bottom Navigation Bar (Sticky for Smartphone HP) */}
-      <nav className="xl:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-1 py-1.5 flex items-center justify-around shadow-lg">
+      <nav 
+        className="xl:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-1 py-1.5 flex items-center justify-around shadow-lg"
+        style={{ paddingBottom: 'calc(0.375rem + env(safe-area-inset-bottom, 0px))' }}
+      >
         <button
           type="button"
           onClick={() => handleMobileTab('overview')}

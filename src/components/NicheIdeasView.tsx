@@ -148,7 +148,7 @@ export const NicheIdeasView: React.FC<NicheIdeasViewProps> = ({
         setErrorMsg('Batas kuota panggilan Gemini tercapai (Galat 429). Mohon tunggu beberapa saat sebelum mencoba kembali.');
         setRetryCountdown(45);
       } else {
-        setErrorMsg(err.message || 'Gagal mencari ide niche. Pastikan koneksi server aktif.');
+        setErrorMsg(err.message?.replace(/^KODE_AKSES_DIBUTUHKAN:\s*/, '') || 'Gagal mencari ide niche. Pastikan koneksi server aktif.');
       }
     } finally {
       setIsLoading(false);

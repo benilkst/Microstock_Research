@@ -134,7 +134,7 @@ export const ScreenshotReaderView: React.FC<ScreenshotReaderViewProps> = ({
       if (is429) {
         setErrorMsg('Batas kuota panggilan Gemini tercapai (Galat 429). Mohon tunggu beberapa saat sebelum mencoba kembali.');
       } else {
-        setErrorMsg(err.message || 'Gagal menganalisis screenshot dengan Gemini.');
+        setErrorMsg(err.message?.replace(/^KODE_AKSES_DIBUTUHKAN:\s*/, '') || 'Gagal menganalisis screenshot dengan Gemini.');
       }
     } finally {
       setIsProcessing(false);

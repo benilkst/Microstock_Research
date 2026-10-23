@@ -56,6 +56,7 @@ import { ReportModal } from './components/ReportModal';
 import { RecheckQueueModal } from './components/RecheckQueueModal';
 import { GuideModal } from './components/GuideModal';
 import { QuickStartCard } from './components/QuickStartCard';
+import { PasscodeModal } from './components/PasscodeModal';
 
 export default function App() {
   // 1. Data States loaded safely with try/catch
@@ -80,6 +81,19 @@ export default function App() {
   // 3. Panduan (User Guide) State
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [guideTargetSectionId, setGuideTargetSectionId] = useState<string | null>(null);
+
+  // 4. Passcode AI Modal State
+  const [isPasscodeModalOpen, setIsPasscodeModalOpen] = useState(false);
+  const [passcodeModalError, setPasscodeModalError] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    const handlePasscodeNeeded = (e: any) => {
+      setPasscodeModalError(e?.detail?.message || 'Kode akses fitur AI diperlukan.');
+      setIsPasscodeModalOpen(true);
+    };
+    window.addEventListener('ai-passcode-needed', handlePasscodeNeeded);
+    return () => window.removeEventListener('ai-passcode-needed', handlePasscodeNeeded);
+  }, []);
 
   const handleOpenGuide = (sectionId?: string) => {
     setGuideTargetSectionId(sectionId || null);
@@ -689,6 +703,16 @@ export default function App() {
           setIsGuideOpen(false);
           setIsReportModalOpen(true);
         }}
+      />
+
+      {/* Modal Kode Akses Fitur AI (Vercel) */}
+      <PasscodeModal
+        isOpen={isPasscodeModalOpen}
+        onClose={() => {
+          setIsPasscodeModalOpen(false);
+          setPasscodeModalError(undefined);
+        }}
+        errorMessage={passcodeModalError}
       />
     </div>
   );

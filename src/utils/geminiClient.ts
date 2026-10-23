@@ -1,6 +1,6 @@
 /**
- * Microstock Research Fase 3 - Gemini Client Utilities & Safeguards
- * Menangani Cache 24 jam, Penghitung Panggilan Harian, Kompresi Screenshot, Galat 429 & Ringkasan Insight Portofolio
+ * Microstock Research - Gemini Client Utilities & Safeguards
+ * Menangani Cache 24 jam, Penghitung Panggilan Harian, Kompresi Screenshot, Galat 429, Kode Akses & Offline Safeguard
  */
 
 import { 
@@ -13,8 +13,36 @@ import { getTodayDateString } from './calculator';
 
 const DAILY_CALLS_PREFIX = 'microstock_gemini_daily_';
 const NICHE_CACHE_PREFIX = 'microstock_niche_cache_';
+const APP_PASSCODE_STORAGE_KEY = 'microstock_app_passcode';
 export const RECOMMENDED_DAILY_LIMIT = 50;
 const CACHE_DURATION_MS = 24 * 60 * 60 * 1000; // 24 Jam
+
+/**
+ * 0. Manajemen Kode Akses Aplikasi (localStorage)
+ */
+export function getStoredPasscode(): string {
+  try {
+    return localStorage.getItem(APP_PASSCODE_STORAGE_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
+export function setStoredPasscode(passcode: string): void {
+  try {
+    localStorage.setItem(APP_PASSCODE_STORAGE_KEY, passcode.trim());
+  } catch (err) {
+    console.error('Gagal menyimpan kode akses di localStorage:', err);
+  }
+}
+
+export function clearStoredPasscode(): void {
+  try {
+    localStorage.removeItem(APP_PASSCODE_STORAGE_KEY);
+  } catch (err) {
+    console.error('Gagal menghapus kode akses dari localStorage:', err);
+  }
+}
 
 /**
  * 1. Ambil statistik pemanggilan API harian
@@ -123,6 +151,7 @@ export function setCachedNicheIdeas(cacheKey: string, data: NicheIdeaCandidate[]
 
 /**
  * Kompresi screenshot di sisi klien (Client-side Canvas Compression)
+ * Memastikan resolusi proporsional maks 1280px dan ukuran berkas di bawah 3 MB
  */
 export async function compressScreenshotClientSide(file: File): Promise<{ base64: string; mimeType: string }> {
   return new Promise((resolve, reject) => {
@@ -169,6 +198,56 @@ export async function compressScreenshotClientSide(file: File): Promise<{ base64
 }
 
 /**
+ * Helper internal untuk menangani respon HTTP API dan kode akses / offline
+ */
+async function handleApiResponse(response: Response, defaultErrorMsg: string) {
+  if (!response.ok) {
+    let errorMsg = defaultErrorMsg;
+    let is429 = response.status === 429;
+    let is401 = response.status === 401;
+
+    try {
+      const errJson = await response.json();
+      if (errJson.error) errorMsg = errJson.error;
+      if (errJson.isRateLimit) is429 = true;
+      if (errJson.needsPasscode) is401 = true;
+    } catch {
+      // ignore
+    }
+
+    if (is401) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ai-passcode-needed', { detail: { message: errorMsg } }));
+      }
+      throw new Error(`KODE_AKSES_DIBUTUHKAN: ${errorMsg}`);
+    }
+
+    if (is429) {
+      throw new Error('BATAS_KUOTA_429: Batas kuota panggilan Gemini tercapai (Galat 429). Mohon tunggu beberapa saat sebelum mencoba kembali.');
+    }
+
+    throw new Error(errorMsg);
+  }
+
+  return response.json();
+}
+
+/**
+ * Helper untuk menangani galat jaringan / offline
+ */
+function handleNetworkError(err: any): never {
+  if (
+    (typeof navigator !== 'undefined' && !navigator.onLine) ||
+    err?.name === 'TypeError' ||
+    err?.message?.toLowerCase().includes('failed to fetch') ||
+    err?.message?.toLowerCase().includes('network')
+  ) {
+    throw new Error('Fitur AI membutuhkan koneksi internet. Periksa jaringan Anda dan coba kembali.');
+  }
+  throw err;
+}
+
+/**
  * Panggil API Ide Niche (Dua Langkah via Server)
  */
 export async function requestNicheIdeas(params: {
@@ -183,6 +262,11 @@ export async function requestNicheIdeas(params: {
   fromCache: boolean;
   cachedHoursAgo?: number;
 }> {
+  // Cek koneksi online
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    throw new Error('Fitur AI membutuhkan koneksi internet. Periksa jaringan Anda dan coba kembali.');
+  }
+
   const cacheKey = generateNicheCacheKey(
     params.assetType,
     params.theme || '',
@@ -203,51 +287,41 @@ export async function requestNicheIdeas(params: {
     }
   }
 
-  // 2. Request ke server
-  const response = await fetch('/api/gemini/niche-ideas', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      assetType: params.assetType,
-      theme: params.theme || '',
-      seasonalMoment: params.seasonalMoment || '',
-      candidateCount: params.candidateCount,
-      isPastWindow: params.isPastWindow || false,
-    }),
-  });
+  // 2. Request ke server (mendukung Vercel /api/niche dan Express)
+  try {
+    const response = await fetch('/api/niche', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-App-Passcode': getStoredPasscode(),
+      },
+      body: JSON.stringify({
+        assetType: params.assetType,
+        theme: params.theme || '',
+        seasonalMoment: params.seasonalMoment || '',
+        candidateCount: params.candidateCount,
+        isPastWindow: params.isPastWindow || false,
+      }),
+    });
 
-  if (!response.ok) {
-    let errorMsg = 'Gagal menghubungi layanan Gemini.';
-    let is429 = response.status === 429;
-    try {
-      const errJson = await response.json();
-      if (errJson.error) errorMsg = errJson.error;
-      if (errJson.isRateLimit) is429 = true;
-    } catch {
-      // ignore
+    const result = await handleApiResponse(response, 'Gagal menghubungi layanan Gemini untuk Ide Niche.');
+    const candidates: NicheIdeaCandidate[] = result.data || [];
+
+    // Simpan ke cache 24 jam
+    if (candidates.length > 0) {
+      setCachedNicheIdeas(cacheKey, candidates);
     }
 
-    if (is429) {
-      throw new Error('BATAS_KUOTA_429: Batas kuota panggilan Gemini tercapai (Galat 429). Mohon tunggu beberapa saat sebelum mencoba kembali.');
-    }
-    throw new Error(errorMsg);
+    // Tambah hitungan harian
+    incrementDailyCallCount();
+
+    return {
+      data: candidates,
+      fromCache: false,
+    };
+  } catch (err: any) {
+    return handleNetworkError(err);
   }
-
-  const result = await response.json();
-  const candidates: NicheIdeaCandidate[] = result.data || [];
-
-  // Simpan ke cache 24 jam
-  if (candidates.length > 0) {
-    setCachedNicheIdeas(cacheKey, candidates);
-  }
-
-  // Tambah hitungan harian
-  incrementDailyCallCount();
-
-  return {
-    data: candidates,
-    fromCache: false,
-  };
 }
 
 /**
@@ -258,66 +332,54 @@ export async function requestScreenshotAnalysis(params: {
   mimeType: string;
   platformHint?: string;
 }): Promise<ScreenshotAnalysisResult> {
-  const response = await fetch('/api/gemini/read-screenshot', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      imageBase64: params.imageBase64,
-      mimeType: params.mimeType,
-      platformHint: params.platformHint,
-    }),
-  });
-
-  if (!response.ok) {
-    let errorMsg = 'Gagal menganalisis screenshot dengan Gemini Vision.';
-    let is429 = response.status === 429;
-    try {
-      const errJson = await response.json();
-      if (errJson.error) errorMsg = errJson.error;
-      if (errJson.isRateLimit) is429 = true;
-    } catch {
-      // ignore
-    }
-
-    if (is429) {
-      throw new Error('BATAS_KUOTA_429: Batas kuota panggilan Gemini tercapai (Galat 429). Mohon tunggu beberapa saat sebelum mencoba kembali.');
-    }
-    throw new Error(errorMsg);
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    throw new Error('Fitur AI membutuhkan koneksi internet. Periksa jaringan Anda dan coba kembali.');
   }
 
-  const result = await response.json();
-  incrementDailyCallCount();
-  return result.data;
+  try {
+    const response = await fetch('/api/screenshot', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-App-Passcode': getStoredPasscode(),
+      },
+      body: JSON.stringify({
+        imageBase64: params.imageBase64,
+        mimeType: params.mimeType,
+        platformHint: params.platformHint,
+      }),
+    });
+
+    const result = await handleApiResponse(response, 'Gagal menganalisis screenshot dengan Gemini Vision.');
+    incrementDailyCallCount();
+    return result.data;
+  } catch (err: any) {
+    return handleNetworkError(err);
+  }
 }
 
 /**
  * Panggil API Ringkas Insight Portofolio (Hanya Agregat Data, Bukan Baris Mentah)
  */
 export async function requestAiInsightSummary(payload: AiInsightAggregatePayload): Promise<string> {
-  const response = await fetch('/api/gemini/summarize-insights', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ payload }),
-  });
-
-  if (!response.ok) {
-    let errorMsg = 'Gagal menyusun narasi insight portofolio.';
-    let is429 = response.status === 429;
-    try {
-      const errJson = await response.json();
-      if (errJson.error) errorMsg = errJson.error;
-      if (errJson.isRateLimit) is429 = true;
-    } catch {
-      // ignore
-    }
-
-    if (is429) {
-      throw new Error('BATAS_KUOTA_429: Batas kuota panggilan Gemini tercapai (Galat 429). Mohon tunggu beberapa saat sebelum mencoba kembali.');
-    }
-    throw new Error(errorMsg);
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    throw new Error('Fitur AI membutuhkan koneksi internet. Periksa jaringan Anda dan coba kembali.');
   }
 
-  const result = await response.json();
-  incrementDailyCallCount();
-  return result.narrative || 'Ringkasan berhasil dibuat.';
+  try {
+    const response = await fetch('/api/insights', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-App-Passcode': getStoredPasscode(),
+      },
+      body: JSON.stringify({ payload }),
+    });
+
+    const result = await handleApiResponse(response, 'Gagal menyusun narasi insight portofolio.');
+    incrementDailyCallCount();
+    return result.narrative || 'Ringkasan berhasil dibuat.';
+  } catch (err: any) {
+    return handleNetworkError(err);
+  }
 }
