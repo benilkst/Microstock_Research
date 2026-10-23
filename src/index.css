@@ -1,15 +1,68 @@
 @import "tailwindcss";
 
+:root {
+  --skala: 0.7;
+}
+
+html {
+  font-size: calc(16px * var(--skala));
+}
+
 @layer base {
   body {
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     color: #0f172a;
     background-color: #f8fafc;
     -webkit-tap-highlight-color: transparent;
+    font-size: max(0.875rem, 10px);
   }
 
   code, kbd, samp, pre {
     font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Lantai ukuran teks: tidak ada teks yang efektif di bawah 10px */
+  .text-xs,
+  .text-\[9px\],
+  .text-\[10px\],
+  .text-\[11px\],
+  .text-\[12px\],
+  small {
+    font-size: max(0.75rem, 10px);
+  }
+
+  /* Standar target sentuh minimal tombol, tab, dan item interaktif */
+  button,
+  select,
+  input[type="button"],
+  input[type="submit"],
+  [role="button"],
+  [role="tab"] {
+    min-height: 36px;
+  }
+
+  /* Standar navigasi bawah ponsel minimal 48px */
+  nav.mobile-nav-bar,
+  .mobile-bottom-nav,
+  nav[data-mobile-nav="true"],
+  nav.xl\:hidden.fixed.bottom-0 {
+    min-height: 48px;
+  }
+
+  /* Di iOS, cegah Safari auto-zoom saat fokus input/select/textarea */
+  @supports (-webkit-touch-callout: none) {
+    input:not([type="checkbox"]):not([type="radio"]),
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+}
+
+/* Pengecualian mode cetak memakai skala standar 100% */
+@media print {
+  html {
+    font-size: 16px !important;
   }
 }
 

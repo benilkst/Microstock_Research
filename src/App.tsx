@@ -57,6 +57,7 @@ import { RecheckQueueModal } from './components/RecheckQueueModal';
 import { GuideModal } from './components/GuideModal';
 import { QuickStartCard } from './components/QuickStartCard';
 import { PasscodeModal } from './components/PasscodeModal';
+import { getStoredDisplayScale, applyDisplayScale } from './utils/scale';
 
 export default function App() {
   // 1. Data States loaded safely with try/catch
@@ -85,6 +86,10 @@ export default function App() {
   // 4. Passcode AI Modal State
   const [isPasscodeModalOpen, setIsPasscodeModalOpen] = useState(false);
   const [passcodeModalError, setPasscodeModalError] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    applyDisplayScale(getStoredDisplayScale());
+  }, []);
 
   useEffect(() => {
     const handlePasscodeNeeded = (e: any) => {

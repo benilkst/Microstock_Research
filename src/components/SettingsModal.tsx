@@ -47,10 +47,12 @@ import {
   Info,
   Target,
   Scale,
-  KeyRound
+  KeyRound,
+  ZoomIn
 } from 'lucide-react';
 import { HelpTooltipButton } from './HelpTooltipButton';
 import { getStoredPasscode, setStoredPasscode, clearStoredPasscode } from '../utils/geminiClient';
+import { getStoredDisplayScale, applyDisplayScale, DEFAULT_DISPLAY_SCALE } from '../utils/scale';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -115,7 +117,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [proposedBenchmark, setProposedBenchmark] = useState<number | null>(null);
   const [measureAppliedMsg, setMeasureAppliedMsg] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'weights' | 'benchmarks' | 'factors' | 'thresholds' | 'storage' | 'history'>('weights');
+  const [activeTab, setActiveTab] = useState<'weights' | 'scale' | 'benchmarks' | 'factors' | 'thresholds' | 'storage' | 'history'>('weights');
+
+  // State Skala Tampilan (Font & UI)
+  const [displayScale, setDisplayScale] = useState<number>(() => getStoredDisplayScale());
+  const [scaleFeedback, setScaleFeedback] = useState<string | null>(null);
+
+  const handleScaleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseFloat(e.target.value);
+    const rounded = Math.round(val * 100) / 100;
+    setDisplayScale(rounded);
+    applyDisplayScale(rounded);
+  };
+
+  const handleSelectScale = (val: number) => {
+    const rounded = Math.round(val * 100) / 100;
+    setDisplayScale(rounded);
+    applyDisplayScale(rounded);
+    setScaleFeedback(`Skala diatur ke ${Math.round(rounded * 100)}%`);
+    setTimeout(() => setScaleFeedback(null), 2500);
+  };
+
+  const handleResetScale = () => {
+    handleSelectScale(DEFAULT_DISPLAY_SCALE);
+  };
 
   // State untuk Impor JSON (Dua cara: Berkas & Tempel JSON)
   const [importMethod, setImportMethod] = useState<'file' | 'paste'>('file');
@@ -377,6 +402,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </button>
           <button
             type="button"
+            onClick={() => setActiveTab('scale')}
+            className={`pb-2 px-1 font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+              activeTab === 'scale'
+                ? 'border-emerald-600 text-emerald-800'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <ZoomIn className="w-3.5 h-3.5" />
+            Skala Tampilan ({Math.round(displayScale * 100)}%)
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveTab('benchmarks')}
             className={`pb-2 px-1 font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'benchmarks'
@@ -594,7 +631,109 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           )}
 
-          {/* TAB 2: ACUAN JENUH PER PLATFORM & FITUR UKUR ACUAN (FASE 5A) */}
+          {/* TAB 2: SKALA TAMPILAN ANTARMUKA */}
+          {activeTab === 'scale' && (
+            <div className="space-y-4 text-xs">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-bold text-slate-900 text-sm">Skala Tampilan Antarmuka</h4>
+                  <p className="text-[11px] text-slate-500">
+                    Atur proporsi ukuran teks, jarak, dan tata letak secara responsif (standar 70%).
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleResetScale}
+                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Kembalikan ke 70%
+                </button>
+              </div>
+
+              {scaleFeedback && (
+                <div className="p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-medium flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{scaleFeedback}</span>
+                </div>
+              )}
+
+              {/* Slider Card */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-900 text-xs">
+                    Penggeser Skala (60% s/d 100%)
+                  </span>
+                  <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-900 font-extrabold text-xs">
+                    {Math.round(displayScale * 100)}% {Math.abs(displayScale - 0.7) < 0.01 ? '(Standar 70%)' : ''}
+                  </span>
+                </div>
+
+                <div className="space-y-1.5">
+                  <input
+                    type="range"
+                    min="0.6"
+                    max="1.0"
+                    step="0.05"
+                    value={displayScale}
+                    onChange={handleScaleSliderChange}
+                    className="w-full accent-emerald-600 cursor-pointer h-2 bg-slate-200 rounded-lg"
+                    aria-label="Pengaturan Skala Tampilan"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-400 font-mono px-0.5">
+                    <span>60% (Kompak)</span>
+                    <span className="text-emerald-700 font-bold">70% (Default)</span>
+                    <span>80%</span>
+                    <span>90%</span>
+                    <span>100% (Penuh)</span>
+                  </div>
+                </div>
+
+                {/* Tombol Cepat */}
+                <div className="space-y-1.5 pt-2 border-t border-slate-200/70">
+                  <span className="text-[11px] font-semibold text-slate-600 block">
+                    Tombol Cepat:
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[0.7, 0.8, 0.9, 1.0].map((val) => {
+                      const isSelected = Math.abs(displayScale - val) < 0.01;
+                      return (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => handleSelectScale(val)}
+                          className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                            isSelected
+                              ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
+                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300'
+                          }`}
+                        >
+                          <span>{Math.round(val * 100)}%</span>
+                          {val === 0.7 && <span className="text-[10px] opacity-80">(Standar)</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Catatan Keterbacaan dan Sentuhan */}
+              <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl text-blue-900 text-xs space-y-1.5">
+                <div className="flex items-center gap-1.5 font-bold text-blue-950">
+                  <Info className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span>Keterbacaan, Standar Sentuh &amp; Ekspor</span>
+                </div>
+                <ul className="list-disc list-inside space-y-1 text-[11px] text-blue-800 leading-relaxed">
+                  <li><strong>Lantai Ukuran Teks:</strong> Ukuran teks memiliki batas bawah aman (<code className="bg-blue-100/80 px-1 py-0.2 rounded font-mono">max(0.75rem, 10px)</code>) sehingga tidak ada teks yang jatuh di bawah 10px efektif.</li>
+                  <li><strong>Area Sentuh Ramah Jari:</strong> Tombol dan tab memiliki tinggi minimal 36px, dan bilah navigasi bawah ponsel minimal 48px.</li>
+                  <li><strong>iOS Safari:</strong> Input dan form mempertahankan font 16px untuk mencegah zooming otomatis browser saat fokus.</li>
+                  <li><strong>Pengecualian Laporan:</strong> Mode cetak browser dan dokumen HTML ekspor tetap berukuran penuh 100%.</li>
+                </ul>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: ACUAN JENUH PER PLATFORM & FITUR UKUR ACUAN (FASE 5A) */}
           {activeTab === 'benchmarks' && (
             <div className="space-y-4 text-xs">
               <div className="flex items-center justify-between">
@@ -1256,6 +1395,63 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       Hapus Kode Akses
                     </button>
                   )}
+                </div>
+              </div>
+
+              {/* 4. Skala Tampilan Antarmuka */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ZoomIn className="w-4 h-4 text-emerald-600" />
+                    <span className="font-bold text-slate-900 block text-xs">
+                      4. Skala Tampilan Antarmuka ({Math.round(displayScale * 100)}%)
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleResetScale}
+                    className="text-[11px] font-semibold text-slate-500 hover:text-slate-800 cursor-pointer flex items-center gap-1"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    Reset 70%
+                  </button>
+                </div>
+
+                <div className="space-y-1">
+                  <input
+                    type="range"
+                    min="0.6"
+                    max="1.0"
+                    step="0.05"
+                    value={displayScale}
+                    onChange={handleScaleSliderChange}
+                    className="w-full accent-emerald-600 cursor-pointer h-2 bg-slate-200 rounded-lg"
+                    aria-label="Penggeser Skala Tampilan Cepat"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                    <span>60%</span>
+                    <span className="text-emerald-700 font-bold">70% (Standar)</span>
+                    <span>80%</span>
+                    <span>90%</span>
+                    <span>100%</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {[0.7, 0.8, 0.9, 1.0].map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => handleSelectScale(v)}
+                      className={`px-2.5 py-1 text-xs rounded-lg border font-semibold cursor-pointer transition-colors ${
+                        Math.abs(displayScale - v) < 0.01
+                          ? 'bg-emerald-600 border-emerald-600 text-white'
+                          : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      {Math.round(v * 100)}%{v === 0.7 ? ' (Default)' : ''}
+                    </button>
+                  ))}
                 </div>
               </div>
 

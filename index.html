@@ -18,6 +18,21 @@
     <meta name="apple-mobile-web-app-title" content="MS Research" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <script>
+      // Set display scale before first render to prevent layout flash
+      (function() {
+        try {
+          var saved = localStorage.getItem('microstock_display_scale');
+          var scale = saved ? parseFloat(saved) : 0.7;
+          if (isNaN(scale) || scale < 0.6 || scale > 1.0) {
+            scale = 0.7;
+          }
+          document.documentElement.style.setProperty('--skala', String(scale));
+        } catch (e) {
+          document.documentElement.style.setProperty('--skala', '0.7');
+        }
+      })();
+    </script>
+    <script>
       // Gracefully shim WebSocket and ignore HMR connection issues in AI Studio preview iframe
       (function() {
         function MockWebSocket(url, protocols) {

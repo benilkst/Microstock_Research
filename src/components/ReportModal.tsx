@@ -263,6 +263,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   <style>
     @page { margin: 12mm; size: A4 portrait; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 100% !important; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       color: #0f172a;
