@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Microstock Research</title>
+    <meta name="description" content="Aplikasi riset kata kunci dan analisis peluang microstock untuk Adobe Stock, Shutterstock, dan Freepik tanpa AI dan tanpa API eksternal." />
+    <meta property="og:title" content="Microstock Research" />
+    <meta property="og:description" content="Aplikasi riset kata kunci dan analisis peluang microstock untuk Adobe Stock, Shutterstock, dan Freepik tanpa AI dan tanpa API eksternal." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script>
+      // Gracefully shim WebSocket and ignore HMR connection issues in AI Studio preview iframe
+      (function() {
+        function MockWebSocket(url, protocols) {
+          this.url = url || '';
+          this.protocols = protocols || '';
+          this.readyState = 1; // WebSocket.OPEN
+          this.OPEN = 1;
+          this.CONNECTING = 0;
+          this.CLOSING = 2;
+          this.CLOSED = 3;
+          this.binaryType = 'blob';
+          this.bufferedAmount = 0;
+          this.extensions = '';
+          this.protocol = '';
+          this.onopen = null;
+          this.onclose = null;
+          this.onmessage = null;
+          this.onerror = null;
+          this._listeners = {};
+
+          this.addEventListener = function(event, handler) {
+            if (!this._listeners[event]) this._listeners[event] = [];
+            this._listeners[event].push(handler);
+            if (event === 'open') {
+              setTimeout(() => {
+                try { handler({ type: 'open', target: this }); } catch(e) {}
+              }, 0);
+            }
+          };
+          this.removeEventListener = function(event, handler) {
+            if (!this._listeners[event]) return;
+            this._listeners[event] = this._listeners[event].filter(function(h) { return h !== handler; });
+          };
+          this.dispatchEvent = function(event) {
+            var handlers = this._listeners[event.type] || [];
+            handlers.forEach(function(h) { try { h(event); } catch(e) {} });
+            return true;
+          };
+          this.send = function() {};
+          this.close = function() {
+            this.readyState = 3;
+          };
+
+          var self = this;
+          setTimeout(function() {
+            if (typeof self.onopen === 'function') {
+              try { self.onopen({ type: 'open', target: self }); } catch(e) {}
+            }
+          }, 0);
+        }
+        MockWebSocket.OPEN = 1;
+        MockWebSocket.CONNECTING = 0;
+        MockWebSocket.CLOSING = 2;
+        MockWebSocket.CLOSED = 3;
+        window.WebSocket = MockWebSocket;
+
+        // Suppress console.error/warn for Vite HMR websocket messages
+        var origConsoleError = console.error;
+        console.error = function() {
+          var text = Array.prototype.join.call(arguments, ' ');
+          if (text.indexOf('[vite]') !== -1 && (text.indexOf('websocket') !== -1 || text.indexOf('WebSocket') !== -1)) {
+            return;
+          }
+          origConsoleError.apply(console, arguments);
+        };
+
+        // Catch and suppress any stray unhandled rejections or errors from @vite/client
+        window.addEventListener('unhandledrejection', function(event) {
+          var msg = (event && event.reason && (event.reason.message || event.reason)) || '';
+          var stack = (event && event.reason && event.reason.stack) || '';
+          if (typeof msg === 'string' && (msg.includes('WebSocket') || msg.includes('@vite/client') || msg.includes('binaryType'))) {
+            event.preventDefault();
+            if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+            return;
+          }
+          if (typeof stack === 'string' && (stack.includes('@vite/client') || stack.includes('WebSocket'))) {
+            event.preventDefault();
+            if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+            return;
+          }
+        }, true);
+
+        window.addEventListener('error', function(event) {
+          var msg = (event && event.message) || '';
+          var filename = (event && event.filename) || '';
+          if (msg.includes('WebSocket') || msg.includes('binaryType') || filename.includes('@vite/client')) {
+            event.preventDefault();
+            if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+            return;
+          }
+        }, true);
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

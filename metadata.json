@@ -1,0 +1,6 @@
+{
+  "name": "Microstock Research Fase 1",
+  "description": "Aplikasi riset kata kunci dan analisis peluang microstock untuk Adobe Stock, Shutterstock, dan Freepik tanpa AI dan tanpa API eksternal.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
