@@ -28,11 +28,19 @@ export function verifyPasscode(passcodeHeader: string | undefined): {
   ok: boolean;
   status?: number;
   error?: string;
+  needsPasscode?: boolean;
 } {
   const serverPasscode = process.env.APP_PASSCODE;
   const isProduction =
     process.env.NODE_ENV === 'production' ||
-    process.env.VERCEL_ENV === 'production';
+    process.env.VERCEL_ENV === 'production' ||
+    process.env.VERCEL === '1';
+
+  // Di lingkungan pengembangan / pratinjau AI Studio, jika klien belum mengatur/mengirim kode akses,
+  // izinkan bypass agar pengujian langsung aktif tanpa terhalang 401
+  if (!isProduction && (!passcodeHeader || !passcodeHeader.trim())) {
+    return { ok: true };
+  }
 
   // Jika APP_PASSCODE belum diatur di server:
   if (!serverPasscode) {
@@ -42,30 +50,33 @@ export function verifyPasscode(passcodeHeader: string | undefined): {
         ok: false,
         status: 401,
         error: 'Akses fitur AI dinonaktifkan: APP_PASSCODE belum dikonfigurasi di server produksi.',
+        needsPasscode: true,
       };
     }
     // Di lingkungan pengembangan / pratinjau AI Studio, pemeriksaan boleh dilewati jika belum diatur
     return { ok: true };
   }
 
-  // Jika APP_PASSCODE sudah diatur di server, periksa header
-  if (!passcodeHeader || typeof passcodeHeader !== 'string') {
+  // Jika APP_PASSCODE sudah diatur di server dan ini produksi atau passcode dikirim:
+  if (!passcodeHeader || typeof passcodeHeader !== 'string' || !passcodeHeader.trim()) {
     return {
       ok: false,
       status: 401,
       error: 'Kode akses fitur AI diperlukan. Silakan masukkan kode akses di aplikasi.',
+      needsPasscode: true,
     };
   }
 
   try {
-    const expected = Buffer.from(serverPasscode, 'utf8');
-    const actual = Buffer.from(passcodeHeader, 'utf8');
+    const expected = Buffer.from(serverPasscode.trim(), 'utf8');
+    const actual = Buffer.from(passcodeHeader.trim(), 'utf8');
 
     if (expected.length !== actual.length) {
       return {
         ok: false,
         status: 401,
         error: 'Kode akses fitur AI tidak cocok. Periksa kembali kode akses Anda.',
+        needsPasscode: true,
       };
     }
 
@@ -75,6 +86,7 @@ export function verifyPasscode(passcodeHeader: string | undefined): {
         ok: false,
         status: 401,
         error: 'Kode akses fitur AI tidak cocok. Periksa kembali kode akses Anda.',
+        needsPasscode: true,
       };
     }
 
@@ -84,8 +96,75 @@ export function verifyPasscode(passcodeHeader: string | undefined): {
       ok: false,
       status: 401,
       error: 'Verifikasi kode akses gagal.',
+      needsPasscode: true,
     };
   }
+}
+
+/**
+ * Helper pemanggilan Gemini dengan timeout cerdas & model cadangan
+ * (gemini-3.8-flash -> gemini-3.1-flash-lite)
+ * Menghindari bottleneck latency tinggi, lonjakan 503, dan galat kuota.
+ */
+async function generateContentWithFallback(
+  ai: GoogleGenAI,
+  requestConfig: {
+    contents: any;
+    config?: any;
+    timeoutMs?: number;
+  }
+) {
+  const candidateModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite'];
+  const timeoutMs = requestConfig.timeoutMs || 14000; // 14 detik per percobaan model
+  let lastError: any = null;
+
+  for (let i = 0; i < candidateModels.length; i++) {
+    const model = candidateModels[i];
+    const isFallback = i > 0;
+
+    const modelConfig = { ...requestConfig.config };
+    // Model fallback flash-lite tidak menggunakan thinkingConfig manual agar eksekusi instan
+    if (isFallback && modelConfig.thinkingConfig) {
+      delete modelConfig.thinkingConfig;
+    }
+
+    try {
+      const res = await Promise.race([
+        ai.models.generateContent({
+          model,
+          contents: requestConfig.contents,
+          config: modelConfig,
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`Timeout pemanggilan model ${model} melebihi ${timeoutMs}ms`)), timeoutMs)
+        ),
+      ]);
+      return res;
+    } catch (err: any) {
+      lastError = err;
+      const errMsg = String(err?.message || err || '');
+      const isRecoverable =
+        err?.status === 503 ||
+        err?.status === 429 ||
+        err?.status === 500 ||
+        errMsg.includes('503') ||
+        errMsg.includes('500') ||
+        errMsg.includes('high demand') ||
+        errMsg.includes('UNAVAILABLE') ||
+        errMsg.includes('Timeout') ||
+        errMsg.includes('RESOURCE_EXHAUSTED') ||
+        errMsg.includes('quota') ||
+        errMsg.includes('deadline');
+
+      if (isRecoverable && i < candidateModels.length - 1) {
+        console.warn(`Model ${model} mengalami kendala/lonjakan (${errMsg.slice(0, 100)}), segera beralih ke cadangan ${candidateModels[i + 1]}...`);
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  throw lastError;
 }
 
 /**
@@ -108,7 +187,7 @@ export async function handleNicheIdeas(body: any) {
   const count = Math.min(15, Math.max(3, Number(candidateCount) || 10));
   const ai = getGenAI();
 
-  // LANGKAH 1: Gemini dengan Google Search Grounding
+  // LANGKAH 1: Gemini dengan Google Search Grounding (dengan timeout cepat & perlindungan kuota)
   const currentYear = new Date().getFullYear();
   const targetYearText = isPastWindow
     ? `Tahun target: Musim depan (${currentYear + 1}), karena jendela unggah tahun ${currentYear} telah lewat.`
@@ -130,13 +209,19 @@ export async function handleNicheIdeas(body: any) {
 
   if (!isSearchToolInCooldown) {
     try {
-      const step1Response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: queryContext,
-        config: {
-          tools: [{ googleSearch: {} }],
-        },
-      });
+      // Diberikan batas 7 detik agar tidak menghambat response time jika search tool sedang padat
+      const step1Response = await Promise.race([
+        ai.models.generateContent({
+          model: 'gemini-3.8-flash',
+          contents: queryContext,
+          config: {
+            tools: [{ googleSearch: {} }],
+          },
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Search grounding timeout')), 7000)
+        ),
+      ]);
 
       step1Text = step1Response.text || '';
 
@@ -163,10 +248,11 @@ export async function handleNicheIdeas(body: any) {
       if (isQuotaErr) {
         searchToolCooldownUntil = Date.now() + 10 * 60 * 1000;
       }
+      // Tetap lanjutkan ke Langkah 2 secara aman dengan pengetahuan umum visual
     }
   }
 
-  // LANGKAH 2: Sintesis Rekomendasi Terstruktur
+  // LANGKAH 2: Sintesis Rekomendasi Terstruktur dengan Fallback Model Cerdas
   const sourcesContext = extractedSources.length > 0
     ? `Gunakan dan tautkan HANYA daftar sumber web resmi berikut yang terbukti valid dari pencarian:\n` +
       extractedSources.map((s, idx) => `[Sumber ${idx + 1}] Judul: "${s.judul}" | URL: "${s.url}"`).join('\n')
@@ -199,8 +285,7 @@ ATURAN STRUKTUR & VALIDASI KETAT:
    - "gaya": Pencahayaan, palet warna, dan komposisi visual.
 `;
 
-  const step2Response = await ai.models.generateContent({
-    model: 'gemini-3.8-flash',
+  const step2Response = await generateContentWithFallback(ai, {
     contents: synthesisPrompt,
     config: {
       thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
@@ -339,8 +424,7 @@ ATURAN MUTLAK:
 - DILARANG KERAS MENGARANG ATAU MENEBAK ANGKA.
 `;
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-3.8-flash',
+  const response = await generateContentWithFallback(ai, {
     contents: {
       parts: [
         {
@@ -443,8 +527,7 @@ ATURAN KETAT DARI PENGGUNA:
    (Arahan taktis pembagian fokus waktu produksi kontributor untuk memaksimalkan ROI)
 `;
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-3.8-flash',
+  const response = await generateContentWithFallback(ai, {
     contents: prompt,
     config: {
       thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
@@ -461,11 +544,26 @@ ATURAN KETAT DARI PENGGUNA:
  * Format error response aman (tanpa membocorkan kunci rahasia atau detail internal)
  */
 export function formatErrorResponse(error: any) {
+  const errMsg = String(error?.message || error || '');
+
+  // 1. Deteksi 401 Kode Akses
+  if (error?.status === 401 || error?.needsPasscode) {
+    return {
+      status: 401,
+      body: {
+        success: false,
+        error: error?.message || 'Kode akses fitur AI diperlukan. Silakan masukkan kode akses di aplikasi.',
+        needsPasscode: true,
+      },
+    };
+  }
+
+  // 2. Deteksi Rate Limit / Kuota
   const isRateLimit =
     error?.status === 429 ||
-    error?.message?.includes('429') ||
-    error?.message?.includes('RESOURCE_EXHAUSTED') ||
-    error?.message?.includes('quota');
+    errMsg.includes('429') ||
+    errMsg.includes('RESOURCE_EXHAUSTED') ||
+    errMsg.includes('quota');
 
   if (isRateLimit) {
     return {
@@ -478,14 +576,46 @@ export function formatErrorResponse(error: any) {
     };
   }
 
-  const status = typeof error?.status === 'number' ? error.status : 500;
-  const message = error?.message || 'Terjadi kesalahan pada layanan pemrosesan AI.';
+  // 3. Deteksi Lonjakan / 503 Overloaded
+  const isOverloaded =
+    error?.status === 503 ||
+    errMsg.includes('503') ||
+    errMsg.includes('UNAVAILABLE') ||
+    errMsg.includes('high demand') ||
+    errMsg.includes('overloaded');
+
+  if (isOverloaded) {
+    return {
+      status: 503,
+      body: {
+        success: false,
+        error: 'Layanan AI Gemini sedang mengalami lonjakan beban sesaat. Silakan coba kembali dalam beberapa detik.',
+        isRateLimit: false,
+      },
+    };
+  }
+
+  const status = typeof error?.status === 'number' && error.status >= 400 && error.status < 600 ? error.status : 500;
+
+  // Bersihkan pesan jika berformat JSON mentah dari SDK
+  let cleanMessage = errMsg;
+  try {
+    const jsonMatch = errMsg.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (parsed?.error?.message) {
+        cleanMessage = parsed.error.message;
+      }
+    }
+  } catch {
+    // Abaikan jika bukan JSON
+  }
 
   return {
     status,
     body: {
       success: false,
-      error: message,
+      error: cleanMessage || 'Terjadi kesalahan pada layanan pemrosesan AI.',
       isRateLimit: false,
     },
   };

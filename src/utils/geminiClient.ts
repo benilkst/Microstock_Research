@@ -233,16 +233,26 @@ async function handleApiResponse(response: Response, defaultErrorMsg: string) {
 }
 
 /**
- * Helper untuk menangani galat jaringan / offline
+ * Helper untuk menangani galat jaringan / offline / timeout
  */
 function handleNetworkError(err: any): never {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    throw new Error('Fitur AI membutuhkan koneksi internet. Periksa jaringan Anda dan coba kembali.');
+  }
   if (
-    (typeof navigator !== 'undefined' && !navigator.onLine) ||
+    err?.name === 'AbortError' ||
+    err?.name === 'TimeoutError' ||
+    err?.message?.toLowerCase().includes('timeout') ||
+    err?.message?.toLowerCase().includes('aborted')
+  ) {
+    throw new Error('Waktu permintaan ke server AI habis (timeout). Server sedang sibuk, silakan coba beberapa saat lagi.');
+  }
+  if (
     err?.name === 'TypeError' ||
     err?.message?.toLowerCase().includes('failed to fetch') ||
     err?.message?.toLowerCase().includes('network')
   ) {
-    throw new Error('Fitur AI membutuhkan koneksi internet. Periksa jaringan Anda dan coba kembali.');
+    throw new Error('Gagal terhubung ke server backend AI. Pastikan koneksi stabil dan coba kembali.');
   }
   throw err;
 }
@@ -295,6 +305,7 @@ export async function requestNicheIdeas(params: {
         'Content-Type': 'application/json',
         'X-App-Passcode': getStoredPasscode(),
       },
+      signal: AbortSignal.timeout(45000),
       body: JSON.stringify({
         assetType: params.assetType,
         theme: params.theme || '',
@@ -343,6 +354,7 @@ export async function requestScreenshotAnalysis(params: {
         'Content-Type': 'application/json',
         'X-App-Passcode': getStoredPasscode(),
       },
+      signal: AbortSignal.timeout(45000),
       body: JSON.stringify({
         imageBase64: params.imageBase64,
         mimeType: params.mimeType,
@@ -373,6 +385,7 @@ export async function requestAiInsightSummary(payload: AiInsightAggregatePayload
         'Content-Type': 'application/json',
         'X-App-Passcode': getStoredPasscode(),
       },
+      signal: AbortSignal.timeout(45000),
       body: JSON.stringify({ payload }),
     });
 
