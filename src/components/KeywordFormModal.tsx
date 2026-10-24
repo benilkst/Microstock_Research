@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AssetType, KeywordEntry, Platform, AppSettings } from '../types/microstock';
 import { getTodayDateString, computeKeywordMetrics } from '../utils/calculator';
-import { X, Plus, AlertCircle, Sparkles, Check, Hash, HelpCircle } from 'lucide-react';
+import { X, Plus, AlertCircle, Sparkles, Check, Hash, HelpCircle, ChevronDown } from 'lucide-react';
 import { HelpTooltipButton } from './HelpTooltipButton';
 
 interface KeywordFormModalProps {
@@ -197,9 +197,9 @@ export const KeywordFormModal: React.FC<KeywordFormModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-      <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-4">
+      <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-4 min-w-0">
         {/* Header Modal */}
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+        <div className="px-[16px] py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
           <div>
             <h2 className="text-base sm:text-lg font-bold text-slate-900">
               {editingEntry ? 'Sunting Riset Kata Kunci' : 'Form Input Riset Kata Kunci'}
@@ -219,8 +219,8 @@ export const KeywordFormModal: React.FC<KeywordFormModalProps> = ({
         </div>
 
         {/* Live Calculation Preview Banner */}
-        <div className="bg-slate-900 text-white px-5 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-3">
+        <div className="bg-slate-900 text-white px-[16px] py-3 flex flex-wrap items-center justify-between gap-3 text-xs overflow-hidden">
+          <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap min-w-0">
             <div>
               <span className="text-slate-400 block text-[10px] uppercase font-mono">Pasokan</span>
               <span className="font-mono font-semibold text-emerald-400">
@@ -254,7 +254,7 @@ export const KeywordFormModal: React.FC<KeywordFormModalProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 bg-emerald-500/20 border border-emerald-500/40 px-3 py-1 rounded-lg">
+          <div className="flex items-center gap-2 bg-emerald-500/20 border border-emerald-500/40 px-3 py-1 rounded-lg shrink-0">
             <span className="text-emerald-300 font-medium">Skor Peluang:</span>
             <span className="text-base font-bold text-emerald-300 font-mono">
               {previewMetrics.opportunityScore}
@@ -263,11 +263,11 @@ export const KeywordFormModal: React.FC<KeywordFormModalProps> = ({
           </div>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4 max-h-[75vh] overflow-y-auto custom-scrollbar">
+        {/* Form Body with Uniform Spacing & Tokens */}
+        <form onSubmit={handleSubmit} className="px-[16px] py-[20px] space-y-[20px] max-h-[75vh] overflow-y-auto custom-scrollbar box-border w-full min-w-0">
           {/* AI Suggestion / Confirmation Banner */}
           {isAiSuggested && (
-            <div className={`p-3.5 rounded-xl border text-xs space-y-2 ${
+            <div className={`p-[16px] rounded-[16px] border text-xs space-y-2 box-border w-full min-w-0 ${
               isConfirmedByUser
                 ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
                 : 'bg-amber-50/80 border-amber-300 text-amber-950'
@@ -308,54 +308,59 @@ export const KeywordFormModal: React.FC<KeywordFormModalProps> = ({
           )}
 
           {/* Row 1: Platform & Tipe Aset */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-[20px]">
+            {/* Field: Platform */}
+            <div className="box-border w-full min-w-0 max-w-full">
+              <label className="block text-[12px] font-semibold text-slate-700 uppercase tracking-[0.04em] mb-[6px]">
                 Platform Microstock <span className="text-rose-500">*</span>
               </label>
-              <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-lg">
+              <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-[12px] box-border w-full min-w-0 max-w-full">
                 {PLATFORMS.map((p) => (
                   <button
                     key={p}
                     type="button"
                     onClick={() => setPlatform(p)}
-                    className={`py-2 px-1 text-xs font-medium rounded-md transition-all text-center cursor-pointer ${
+                    className={`h-[44px] text-[14px] rounded-[10px] transition-all text-center cursor-pointer flex items-center justify-center box-border min-w-0 ${
                       platform === p
-                        ? 'bg-white text-slate-900 shadow-xs font-bold'
-                        : 'text-slate-600 hover:text-slate-900'
+                        ? 'bg-white text-slate-900 shadow-xs font-semibold'
+                        : 'text-slate-600 hover:text-slate-900 font-normal'
                     }`}
                   >
                     {p === 'Adobe Stock' ? 'Adobe' : p === 'Shutterstock' ? 'Shutter' : 'Freepik'}
                   </button>
                 ))}
               </div>
-              <p className="text-[11px] text-slate-500 mt-1">Terpilih: {platform}</p>
+              <p className="text-[13px] text-slate-500 mt-[6px]">Terpilih: {platform}</p>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+            {/* Field: Tipe Aset */}
+            <div className="box-border w-full min-w-0 max-w-full">
+              <label className="block text-[12px] font-semibold text-slate-700 uppercase tracking-[0.04em] mb-[6px]">
                 Tipe Aset <span className="text-rose-500">*</span>
               </label>
-              <select
-                value={assetType}
-                onChange={(e) => setAssetType(e.target.value as AssetType)}
-                className="w-full text-xs font-medium bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 cursor-pointer"
-              >
-                {ASSET_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-              <p className="text-[11px] text-slate-500 mt-1">
+              <div className="relative box-border w-full min-w-0 max-w-full">
+                <select
+                  value={assetType}
+                  onChange={(e) => setAssetType(e.target.value as AssetType)}
+                  className="box-border w-full min-w-0 max-w-full h-[48px] text-[16px] font-normal font-sans text-slate-900 bg-white border border-slate-300 rounded-[12px] px-[14px] pr-10 [appearance:none] [-webkit-appearance:none] focus:outline-hidden focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                >
+                  {ASSET_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-5 h-5 text-slate-400 absolute right-[14px] top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+              <p className="text-[13px] text-slate-500 mt-[6px]">
                 Peringkat tiap tipe aset dipisah secara ketat.
               </p>
             </div>
           </div>
 
-          {/* Row 2: Kata Kunci */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+          {/* Row 2: Kata Kunci (Keyword) */}
+          <div className="box-border w-full min-w-0 max-w-full">
+            <label className="block text-[12px] font-semibold text-slate-700 uppercase tracking-[0.04em] mb-[6px]">
               Kata Kunci (Keyword) <span className="text-rose-500">*</span>
             </label>
             <input
@@ -372,23 +377,27 @@ export const KeywordFormModal: React.FC<KeywordFormModalProps> = ({
                   });
                 }
               }}
-              className={`w-full text-sm bg-white border rounded-lg px-3.5 py-2.5 text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 ${
+              className={`box-border w-full min-w-0 max-w-full h-[48px] text-[16px] font-normal font-sans text-slate-900 placeholder:text-[16px] placeholder:text-slate-400 bg-white border rounded-[12px] px-[14px] focus:outline-hidden focus:ring-2 ${
                 errors.keyword
                   ? 'border-rose-400 focus:ring-rose-400 bg-rose-50/20'
                   : 'border-slate-300 focus:ring-emerald-500'
               }`}
             />
             {errors.keyword && (
-              <p className="text-xs text-rose-600 mt-1 flex items-center gap-1">
-                <AlertCircle className="w-3.5 h-3.5" /> {errors.keyword}
+              <p className="text-[13px] text-rose-600 mt-[6px] flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4 shrink-0" /> {errors.keyword}
               </p>
             )}
+            <p className="text-[13px] text-slate-500 mt-[6px]">
+              Masukkan kata kunci pencarian dalam bahasa Inggris atau Indonesia.
+            </p>
           </div>
 
           {/* Row 3: Jumlah Hasil Pencarian & Tanggal Cek */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-[20px]">
+            {/* Field: Jumlah Hasil Pencarian */}
+            <div className="box-border w-full min-w-0 max-w-full">
+              <label className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-700 uppercase tracking-[0.04em] mb-[6px]">
                 <span>Jumlah Hasil Pencarian <span className="text-rose-500">*</span></span>
                 {onOpenGuide && <HelpTooltipButton topic="jumlah_hasil" onOpenGuide={onOpenGuide} />}
               </label>
@@ -399,51 +408,52 @@ export const KeywordFormModal: React.FC<KeywordFormModalProps> = ({
                 placeholder="0"
                 value={searchResultCount}
                 onChange={(e) => setSearchResultCount(e.target.value)}
-                className={`w-full font-mono text-sm bg-white border rounded-lg px-3.5 py-2.5 text-slate-900 focus:outline-hidden focus:ring-2 ${
+                className={`box-border w-full min-w-0 max-w-full h-[48px] text-[16px] font-normal font-sans [font-variant-numeric:tabular-nums] text-slate-900 placeholder:text-[16px] placeholder:text-slate-400 bg-white border rounded-[12px] px-[14px] focus:outline-hidden focus:ring-2 ${
                   errors.searchResultCount
                     ? 'border-rose-400 focus:ring-rose-400'
                     : 'border-slate-300 focus:ring-emerald-500'
                 }`}
               />
               {errors.searchResultCount && (
-                <p className="text-xs text-rose-600 mt-1 flex items-center gap-1">
-                  <AlertCircle className="w-3.5 h-3.5" /> {errors.searchResultCount}
+                <p className="text-[13px] text-rose-600 mt-[6px] flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4 shrink-0" /> {errors.searchResultCount}
                 </p>
               )}
-              <p className="text-[11px] text-slate-500 mt-1">
+              <p className="text-[13px] text-slate-500 mt-[6px]">
                 Angka hasil pencarian saat mencari kata kunci di {platform}.
               </p>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+            {/* Field: Tanggal Cek */}
+            <div className="box-border w-full min-w-0 max-w-full">
+              <label className="block text-[12px] font-semibold text-slate-700 uppercase tracking-[0.04em] mb-[6px]">
                 Tanggal Cek <span className="text-rose-500">*</span>
               </label>
               <input
                 type="date"
                 value={checkDate}
                 onChange={(e) => setCheckDate(e.target.value)}
-                className="w-full text-sm bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                className="box-border w-full min-w-0 max-w-full h-[48px] text-[16px] font-normal font-sans text-slate-900 bg-white border border-slate-300 rounded-[12px] px-[14px] [appearance:none] [-webkit-appearance:none] focus:outline-hidden focus:ring-2 focus:ring-emerald-500 cursor-pointer"
               />
-              <p className="text-[11px] text-slate-500 mt-1">
+              <p className="text-[13px] text-slate-500 mt-[6px]">
                 Otomatis hari ini ({getTodayDateString()}). Bisa disesuaikan.
               </p>
             </div>
           </div>
 
           {/* Row 4: Skor Permintaan 1-5 & Sumber Skor */}
-          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+          <div className="p-[16px] bg-slate-50 border border-slate-200 rounded-[16px] space-y-[20px] box-border w-full min-w-0 max-w-full">
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 uppercase tracking-wide">
+              <div className="flex flex-wrap items-center justify-between gap-1 mb-[6px]">
+                <label className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-700 uppercase tracking-[0.04em]">
                   <span>Skor Permintaan (1 - 5)</span>
                   {onOpenGuide && <HelpTooltipButton topic="skor_permintaan" onOpenGuide={onOpenGuide} />}
                 </label>
-                <span className="text-[11px] text-slate-500">
+                <span className="text-[13px] text-slate-500">
                   {demandScore ? `${demandScore} dari 5 bintang` : 'Belum ditentukan (opsional)'}
                 </span>
               </div>
-              <div className="grid grid-cols-6 gap-1.5">
+              <div className="grid grid-cols-6 gap-[8px] box-border w-full min-w-0 max-w-full">
                 <button
                   type="button"
                   onClick={() => {
@@ -454,7 +464,7 @@ export const KeywordFormModal: React.FC<KeywordFormModalProps> = ({
                       return n;
                     });
                   }}
-                  className={`py-2 px-1 text-xs font-medium rounded-lg border text-center transition-all cursor-pointer ${
+                  className={`h-[44px] text-[14px] font-medium rounded-[10px] border text-center transition-all cursor-pointer flex items-center justify-center box-border min-w-0 px-0.5 leading-none whitespace-nowrap ${
                     demandScore === null
                       ? 'bg-white border-slate-400 font-bold text-slate-900 shadow-xs'
                       : 'bg-slate-100 border-transparent text-slate-500 hover:text-slate-800'
@@ -467,7 +477,7 @@ export const KeywordFormModal: React.FC<KeywordFormModalProps> = ({
                     key={s}
                     type="button"
                     onClick={() => setDemandScore(s)}
-                    className={`py-2 px-1 text-xs font-medium rounded-lg border text-center transition-all cursor-pointer ${
+                    className={`h-[44px] text-[14px] font-medium rounded-[10px] border text-center transition-all cursor-pointer flex items-center justify-center box-border min-w-0 px-0.5 leading-none whitespace-nowrap ${
                       demandScore === s
                         ? 'bg-emerald-600 border-emerald-600 font-bold text-white shadow-xs'
                         : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
@@ -480,7 +490,7 @@ export const KeywordFormModal: React.FC<KeywordFormModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
+              <label className="block text-[12px] font-semibold text-slate-700 uppercase tracking-[0.04em] mb-[6px]">
                 Sumber Skor Permintaan {demandScore !== null && <span className="text-rose-500">* (Wajib)</span>}
               </label>
               <input
@@ -497,37 +507,37 @@ export const KeywordFormModal: React.FC<KeywordFormModalProps> = ({
                     });
                   }
                 }}
-                className={`w-full text-xs sm:text-sm bg-white border rounded-lg px-3 py-2 text-slate-900 focus:outline-hidden focus:ring-2 ${
+                className={`box-border w-full min-w-0 max-w-full h-[48px] text-[16px] font-normal font-sans text-slate-900 placeholder:text-[16px] placeholder:text-slate-400 bg-white border rounded-[12px] px-[14px] focus:outline-hidden focus:ring-2 ${
                   errors.demandSource
                     ? 'border-rose-400 focus:ring-rose-400 bg-rose-50/20'
                     : 'border-slate-300 focus:ring-emerald-500'
                 }`}
               />
               {errors.demandSource && (
-                <p className="text-xs text-rose-600 mt-1 flex items-center gap-1">
-                  <AlertCircle className="w-3.5 h-3.5" /> {errors.demandSource}
+                <p className="text-[13px] text-rose-600 mt-[6px] flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4 shrink-0" /> {errors.demandSource}
                 </p>
               )}
-              <p className="text-[11px] text-slate-500 mt-1">
+              <p className="text-[13px] text-slate-500 mt-[6px]">
                 Tulis nama sumber atau tempel tautan untuk memastikan skor kepercayaan Tinggi.
               </p>
             </div>
           </div>
 
           {/* Row 5: ID Aset Teratas (Hingga 10) */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide">
+          <div className="box-border w-full min-w-0 max-w-full">
+            <div className="flex items-center justify-between mb-[6px]">
+              <label className="block text-[12px] font-semibold text-slate-700 uppercase tracking-[0.04em]">
                 ID Aset Teratas (Opsional, Hingga 10)
               </label>
-              <span className="text-xs text-slate-500 font-mono">
+              <span className="text-[13px] text-slate-500 font-mono">
                 {topAssetIds.length} / 10
               </span>
             </div>
 
-            <div className="flex gap-2 mb-2">
-              <div className="relative flex-1">
-                <Hash className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+            <div className="flex gap-[8px] box-border w-full min-w-0 max-w-full">
+              <div className="relative flex-1 min-w-0">
+                <Hash className="w-5 h-5 text-slate-400 absolute left-[14px] top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
                   placeholder="Ketik ID lalu tekan Tambah atau koma (mis: 89421034)"
@@ -540,28 +550,29 @@ export const KeywordFormModal: React.FC<KeywordFormModalProps> = ({
                     }
                   }}
                   disabled={topAssetIds.length >= 10}
-                  className="w-full text-xs sm:text-sm bg-white border border-slate-300 rounded-lg pl-9 pr-3 py-2 text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100 disabled:text-slate-400"
+                  className="box-border w-full min-w-0 max-w-full h-[48px] text-[16px] font-normal font-sans text-slate-900 placeholder:text-[16px] placeholder:text-slate-400 bg-white border border-slate-300 rounded-[12px] pl-[40px] pr-[14px] focus:outline-hidden focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100 disabled:text-slate-400"
                 />
               </div>
               <button
                 type="button"
                 onClick={handleAddAssetId}
                 disabled={!topAssetInput.trim() || topAssetIds.length >= 10}
-                className="px-3.5 py-2 bg-slate-800 text-white text-xs font-semibold rounded-lg hover:bg-slate-900 disabled:opacity-40 transition-colors flex items-center gap-1 cursor-pointer shrink-0"
+                className="h-[48px] px-[16px] bg-slate-800 text-white text-[14px] font-semibold rounded-[12px] hover:bg-slate-900 disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
               >
                 <Plus className="w-4 h-4" />
-                Tambah ID
+                <span className="hidden sm:inline">Tambah ID</span>
+                <span className="sm:hidden">Tambah</span>
               </button>
             </div>
 
             {errors.topAssetIds && (
-              <p className="text-xs text-rose-600 mb-2 flex items-center gap-1">
-                <AlertCircle className="w-3.5 h-3.5" /> {errors.topAssetIds}
+              <p className="text-[13px] text-rose-600 mt-[6px] flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4 shrink-0" /> {errors.topAssetIds}
               </p>
             )}
 
             {topAssetIds.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 p-2 bg-slate-50 border border-slate-200 rounded-lg">
+              <div className="flex flex-wrap gap-1.5 p-2.5 bg-slate-50 border border-slate-200 rounded-[12px] mt-[6px]">
                 {topAssetIds.map((id, index) => (
                   <span
                     key={index}
@@ -580,11 +591,14 @@ export const KeywordFormModal: React.FC<KeywordFormModalProps> = ({
                 ))}
               </div>
             )}
+            <p className="text-[13px] text-slate-500 mt-[6px]">
+              Simpan nomor ID aset terlaris pada pencarian untuk dijadikan acuan konten.
+            </p>
           </div>
 
           {/* Row 6: Catatan */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+          <div className="box-border w-full min-w-0 max-w-full">
+            <label className="block text-[12px] font-semibold text-slate-700 uppercase tracking-[0.04em] mb-[6px]">
               Catatan (Opsional)
             </label>
             <textarea
@@ -592,26 +606,29 @@ export const KeywordFormModal: React.FC<KeywordFormModalProps> = ({
               placeholder="Ide variasi sudut pandang, tema warna, format orientasi (horizontal/vertical), dll."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full text-xs sm:text-sm bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+              className="box-border w-full min-w-0 max-w-full text-[16px] font-normal font-sans text-slate-900 placeholder:text-[16px] placeholder:text-slate-400 bg-white border border-slate-300 rounded-[12px] p-[14px] focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
             />
+            <p className="text-[13px] text-slate-500 mt-[6px]">
+              Catatan strategi produksi, komposisi, atau referensi penting lainnya.
+            </p>
           </div>
 
           {/* Form Footer */}
           <div className="pt-4 border-t border-slate-200 flex flex-col-reverse sm:flex-row items-center justify-between gap-3">
-            <span className="text-[11px] text-slate-600 italic text-center sm:text-left">
+            <span className="text-[12px] text-slate-500 italic text-center sm:text-left">
               * Indikator relatif, bukan angka mutlak.
             </span>
             <div className="flex items-center gap-2.5 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={onClose}
-                className="w-full sm:w-auto px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                className="w-full sm:w-auto h-[48px] px-5 text-[14px] font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-[12px] transition-colors cursor-pointer flex items-center justify-center"
               >
                 Batal
               </button>
               <button
                 type="submit"
-                className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full sm:w-auto h-[48px] px-6 bg-emerald-600 hover:bg-emerald-700 text-white text-[14px] font-bold rounded-[12px] shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Check className="w-4 h-4" />
                 {editingEntry ? 'Perbarui Data' : 'Simpan Riset'}

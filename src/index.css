@@ -26,9 +26,21 @@ html {
   .text-\[9px\],
   .text-\[10px\],
   .text-\[11px\],
-  .text-\[12px\],
   small {
     font-size: max(0.75rem, 10px);
+  }
+
+  /* Reset input date agar tidak melebihi container */
+  input[type="date"] {
+    -webkit-appearance: none;
+    appearance: none;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+  input[type="date"]::-webkit-date-and-time-value {
+    text-align: left;
   }
 
   /* Standar target sentuh minimal tombol, tab, dan item interaktif */
